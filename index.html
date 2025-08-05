@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Feuille de Match</title>
 </head>
 <body>
   <h1>Remplir la feuille de match</h1>
   <form id="form">
-    <label>Équipe : <input type="text" name="equipe" required value="Drime Time"></label><br>
-    <label>Couleur : <input type="text" name="couleur" required value="Violet"></label><br>
-    <label>Adversaire : <input type="text" name="adversaire" required></label><br>
+    <label>Équipe : <input type="text" name="equipe" required value="Drime Time" /></label><br />
+    <label>Couleur : <input type="text" name="couleur" required value="Violet" /></label><br />
+    <label>Adversaire : <input type="text" name="adversaire" required /></label><br />
 
-    <label><input type="radio" name="localite" value="locaux" checked> Locaux</label>
-    <label><input type="radio" name="localite" value="visiteurs"> Visiteurs</label><br><br>
+    <label><input type="radio" name="localite" value="locaux" checked /> Locaux</label>
+    <label><input type="radio" name="localite" value="visiteurs" /> Visiteurs</label><br /><br />
 
     <fieldset>
       <legend>Joueurs (cocher les pseudos)</legend>
       <div id="joueurs"></div>
-    </fieldset><br>
+    </fieldset><br />
 
-    <button type="submit">Download</button>
+    <button type="submit">Générer Excel</button>
   </form>
 
   <script>
@@ -29,16 +29,15 @@
       const res = await fetch(`${API_URL}/joueurs`);
       const pseudos = await res.json();
       const container = document.getElementById("joueurs");
-
-      pseudos.forEach(pseudo => {
+      pseudos.forEach((pseudo) => {
         const label = document.createElement("label");
-        label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}"> ${pseudo}`;
+        label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}" /> ${pseudo}`;
         container.appendChild(label);
         container.appendChild(document.createElement("br"));
       });
     }
 
-    document.getElementById("form").addEventListener("submit", async e => {
+    document.getElementById("form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.target;
       const data = {
@@ -46,21 +45,35 @@
         couleur: form.couleur.value,
         adversaire: form.adversaire.value,
         locaux: form.localite.value === "locaux",
-        joueurs: Array.from(form.querySelectorAll("input[name='joueur']:checked")).map(cb => cb.value)
+        joueurs: Array.from(form.querySelectorAll("input[name='joueur']:checked")).map(
+          (cb) => cb.value
+        ),
       };
 
       const res = await fetch(`${API_URL}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
       });
+
+      // Récupérer le nom de fichier depuis l'en-tête Content-Disposition
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = "feuille_de_match.xlsx"; // Nom par défaut
+      if (disposition && disposition.indexOf("filename=") !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, "");
+        }
+      }
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "feuille_de_match.xlsx";
+      a.download = filename;
       a.click();
+      URL.revokeObjectURL(url);
     });
 
     chargerJoueurs();
