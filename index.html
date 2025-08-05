@@ -1,0 +1,70 @@
+# frontend/index.html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Feuille de Match</title>
+</head>
+<body>
+  <h1>Remplir la feuille de match</h1>
+  <form id="form">
+    <label>Équipe : <input type="text" name="equipe" required value="Drime Time"></label><br>
+    <label>Couleur : <input type="text" name="couleur" required value="Violet"></label><br>
+    <label>Adversaire : <input type="text" name="adversaire" required></label><br>
+
+    <label><input type="radio" name="localite" value="locaux" checked> Locaux</label>
+    <label><input type="radio" name="localite" value="visiteurs"> Visiteurs</label><br><br>
+
+    <fieldset>
+      <legend>Joueurs (cocher les pseudos)</legend>
+      <div id="joueurs"></div>
+    </fieldset><br>
+
+    <button type="submit">Générer Excel</button>
+  </form>
+
+  <script>
+    const API_URL = "https://feuille-match-api.onrender.com"; // Modifier selon le backend
+
+    async function chargerJoueurs() {
+      const res = await fetch(`${API_URL}/joueurs`);
+      const pseudos = await res.json();
+      const container = document.getElementById("joueurs");
+
+      pseudos.forEach(pseudo => {
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}"> ${pseudo}`;
+        container.appendChild(label);
+        container.appendChild(document.createElement("br"));
+      });
+    }
+
+    document.getElementById("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        equipe: form.equipe.value,
+        couleur: form.couleur.value,
+        adversaire: form.adversaire.value,
+        locaux: form.localite.value === "locaux",
+        joueurs: Array.from(form.querySelectorAll("input[name='joueur']:checked")).map(cb => cb.value)
+      };
+
+      const res = await fetch(`${API_URL}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "feuille_de_match.xlsx";
+      a.click();
+    });
+
+    chargerJoueurs();
+  </script>
+</body>
+</html>
