@@ -14,10 +14,10 @@
     <label><input type="radio" name="localite" value="locaux" checked /> Locaux</label>
     <label><input type="radio" name="localite" value="visiteurs" /> Visiteurs</label><br /><br />
 
-    <fieldset>
-      <legend>Joueurs (cocher les pseudos)</legend>
-      <div id="joueurs"></div>
-    </fieldset><br />
+    <div>
+      <strong>Joueurs (cocher les pseudos)</strong><br />
+      <div id="joueurs">⏳ Chargement des joueurs...</div>
+    </div><br />
 
     <button type="submit">Générer Excel</button>
   </form>
@@ -29,6 +29,7 @@
       const res = await fetch(`${API_URL}/joueurs`);
       const pseudos = await res.json();
       const container = document.getElementById("joueurs");
+      container.innerHTML = ""; // Efface le texte de chargement
       pseudos.forEach((pseudo) => {
         const label = document.createElement("label");
         label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}" /> ${pseudo}`;
