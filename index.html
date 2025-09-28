@@ -15,7 +15,10 @@
     <label><input type="radio" name="localite" value="visiteurs" /> Visiteurs</label><br /><br />
 
     <div>
-      <strong>Joueurs (cocher les pseudos)</strong><br />
+      <strong>
+        Joueurs
+        (<a href="/trombi.pdf" target="_blank" rel="noopener noreferrer">voir PDF</a>)
+      </strong><br />
       <div id="joueurs">⏳ Chargement des joueurs...</div>
     </div><br />
 
@@ -26,16 +29,22 @@
     const API_URL = "https://rpicca.pythonanywhere.com";
 
     async function chargerJoueurs() {
-      const res = await fetch(`${API_URL}/joueurs`);
-      const pseudos = await res.json();
       const container = document.getElementById("joueurs");
-      container.innerHTML = ""; // Efface le texte de chargement
-      pseudos.forEach((pseudo) => {
-        const label = document.createElement("label");
-        label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}" /> ${pseudo}`;
-        container.appendChild(label);
-        container.appendChild(document.createElement("br"));
-      });
+      try {
+        const res = await fetch(`${API_URL}/joueurs`);
+        if (!res.ok) throw new Error(`Erreur ${res.status}`);
+        const pseudos = await res.json();
+        container.innerHTML = ""; // Efface le texte de chargement
+        pseudos.forEach((pseudo) => {
+          const label = document.createElement("label");
+          label.innerHTML = `<input type="checkbox" name="joueur" value="${pseudo}" /> ${pseudo}`;
+          container.appendChild(label);
+          container.appendChild(document.createElement("br"));
+        });
+      } catch (err) {
+        console.error(err);
+        container.textContent = "Impossible de charger les joueurs.";
+      }
     }
 
     document.getElementById("form").addEventListener("submit", async (e) => {
@@ -51,30 +60,42 @@
         ),
       };
 
-      const res = await fetch(`${API_URL}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+      try {
+        const res = await fetch(`${API_URL}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
 
-      // Récupérer le nom de fichier depuis l'en-tête Content-Disposition
-      const disposition = res.headers.get("Content-Disposition");
-      let filename = "feuille_de_match.xlsx"; // Nom par défaut
-      if (disposition && disposition.indexOf("filename=") !== -1) {
-        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-        const matches = filenameRegex.exec(disposition);
-        if (matches != null && matches[1]) {
-          filename = matches[1].replace(/['"]/g, "");
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Erreur serveur: ${res.status} ${text}`);
         }
-      }
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+        // Récupérer le nom de fichier depuis l'en-tête Content-Disposition
+        const disposition = res.headers.get("Content-Disposition");
+        let filename = "feuille_de_match.xlsx"; // Nom par défaut
+        if (disposition && disposition.indexOf("filename=") !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) {
+            filename = matches[1].replace(/['"]/g, "");
+          }
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la génération du fichier. Voir la console pour plus d'infos.");
+      }
     });
 
     chargerJoueurs();
